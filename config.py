@@ -9,6 +9,7 @@ tf.flags.DEFINE_integer("batch_size", 64, "Batch size")
 tf.flags.DEFINE_float("learning_rate", .0005, "Learning rate")
 tf.flags.DEFINE_string('records_val', 'cache/allrecipes-val.tfrecords', 'TFrecord files')
 tf.flags.DEFINE_string('records_train', 'cache/allrecipes-train.tfrecords', 'TFrecord files')
+tf.flags.DEFINE_string('data_dir', 'sample', 'Directory with json data')
 tf.flags.DEFINE_boolean('inference', False, 'Find nearest neighbor for ingredients')
 
 FLAGS = tf.flags.FLAGS
@@ -29,7 +30,7 @@ except:
 
 @lru_cache(maxsize=32)
 def param(name):
-    path = 'cache/allrecipes-info.json'
+    path = os.path.join(FLAGS.data_dir, 'allrecipes-info.json')
     if not os.path.exists(path):
         return None
     with open(path) as fp:

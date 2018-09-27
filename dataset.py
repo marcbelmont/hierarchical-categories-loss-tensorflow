@@ -4,6 +4,7 @@ from glob import glob
 import json
 import jsonlines
 import numpy as np
+import os
 import re, unidecode
 import tensorflow as tf
 
@@ -42,8 +43,9 @@ def convert_to_record(recipes, filename):
             if key not in cat2id:
                 break
             categories[j] = cat2id[key]
+
         if categories[0] == -1:
-            raise Exception('Main category is missing!')
+            continue
 
         # Labels
         title = clean_text(recipe['title'])
@@ -244,13 +246,13 @@ def save_allrecipes():
     tree = allrecipe_tree(recipes)
     result = tree_vecs(tree)
     result.update(charset(recipes))
-    with open('cache/allrecipes-info.json', 'w') as f:
+    with open(os.path.join(FLAGS.data_dir, 'allrecipes-info.json'), 'w') as f:
         json.dump(result, f)
     return result
 
 
 def allrecipes():
-    filenames = glob('data/recipes*.jl')
+    filenames = glob(os.path.join(FLAGS.data_dir, 'recipes*.jl'))
     recipes = []
     dups = set()
     dups_count = 0
@@ -280,7 +282,7 @@ def allrecipes():
                 recipes += [dict(
                     title=title, hierarchy=hierarchy, ingredients=ingredients)]
     print('Total', total, 'Duplicates', dups_count, 'Valid', len(recipes))
-    with open('cache/allrecipes.json', 'w') as f:
+    with open(os.path.join(FLAGS.data_dir, 'allrecipes.json'), 'w') as f:
         json.dump(recipes, f)
     return recipes
 
@@ -300,7 +302,7 @@ def read_ingredient(ingredient):
 
 
 def recipes_clean():
-    with open('cache/allrecipes.json', ) as f:
+    with open(os.path.join(FLAGS.data_dir, 'allrecipes.json'), ) as f:
         recipes = json.load(f)
 
     def f(item):  # hack to align this list with tfrecords
@@ -333,6 +335,7 @@ def char_tables(chars):
     char2id = str.maketrans(chars, ''.join([chr(i) for i in range(len(chars))]))
     return id2char, char2id
 
+
 regex_punctuation = re.compile('[%s]' % re.escape('!"#$%&\'()*+,-.:;<=>?@[\\]^_`{|}~/'))
 regex_space = re.compile('\s+')
 regex_numbers = re.compile('[0-9]')
@@ -350,6 +353,9 @@ def clean_text(text):
 def main():
     save_allrecipes()
     recipes = recipes_clean()
+    if not recipes:
+        print('No recipes found!')
+        return
     convert_to_record(recipes[:1000], FLAGS.records_val)
     convert_to_record(recipes[1000:], FLAGS.records_train)
 
